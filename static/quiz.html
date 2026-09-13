@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出题 · FlyLab</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>🐝 FlyLab · 一只住在服务器上的果蝇</h1>
+    <nav class="nav">
+      <a href="/" class="active">✍️ 出题</a>
+      <a href="/records">🗒️ 记录</a>
+      <a href="/mechanism">🧠 机制</a>
+      <a href="/about">📖 其他</a>
+    </nav>
+  </div>
+
+  <div class="quizgrid">
+    <!-- 左：出题 -->
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+        <span class="badge off" id="autoBadge">自动出题：已停止</span>
+        <span class="doc">蝇只练过 5 种印刷字体 · <b>Merriweather</b> 等测试字体它从未见过</span>
+      </div>
+
+      <div class="problem">问题 <b id="qChar">–</b> <span id="qFont" style="font-size:12px"></span></div>
+      <img id="quizChar" alt="题目">
+
+      <div class="problem" style="margin-top:14px">你来写给它看（写在下面黑框里）</div>
+      <div style="display:flex; gap:20px; flex-wrap:wrap">
+        <div>
+          <canvas id="pad" width="256" height="256"></canvas>
+          <div style="margin-top:10px">
+            <button id="btnSubmit" onclick="submitDraw()">提交给蝇</button>
+            <button class="ghost" onclick="clearPad()">擦掉</button>
+            <button class="ghost" id="btnAuto" onclick="toggleAuto()">▶ 开始自动出题</button>
+          </div>
+        </div>
+        <div style="flex:1; min-width:220px">
+          <div class="attempts" id="attempts">蝇在等待题目…</div>
+          <div class="score" id="score"><small>本页 0 / 0 题正解</small></div>
+          <div class="doc" style="margin-top:10px">提交后蝇最多尝试 3 次（每次神经噪声不同）：
+            <b style="color:var(--accent)">一发正解</b> / 第 2 次 / 第 3 次 / 放弃。
+            所有作答公开存档于<a href="/records">记录页</a>，<b>不用于训练</b>。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：脑活动侧栏 -->
+    <div class="brainpanel">
+      <h3><span class="dot">●</span> 脑活动 <span style="color:var(--dim); font-weight:400">· 实时镜像</span></h3>
+      <div class="brow"><span>投射 PN</span><canvas id="sp-pn" width="150" height="26"></canvas><span class="hz" id="hz-pn">–</span></div>
+      <div class="brow"><span>凯尼恩 KC</span><canvas id="sp-kc" width="150" height="26"></canvas><span class="hz" id="hz-kc">–</span></div>
+      <div class="brow"><span>KC 稀疏度</span><canvas id="sp-frac" width="150" height="26"></canvas><span class="hz" id="hz-frac">–</span></div>
+      <canvas id="kcMini" width="280" height="150"></canvas>
+      <div class="kcnote" id="kcNote">等待神经活动…</div>
+      <div class="kcnote" style="margin-top:6px">散点 = 5,177 个 KC 的示意位置（双半球）。<span style="color:var(--blue)">蓝点</span> = 此刻发火的细胞。</div>
+    </div>
+  </div>
+
+  <h2>实时训练流（最新 30 张，红框 = 答错并被多巴胺纠正）</h2>
+  <div class="panel"><div id="stream"></div></div>
+
+  <footer>FlyLab · 灵感来自 <a href="https://hae.satoru.net/" target="_blank">hae.satoru.net</a> · 训练与网站运行于局域网服务器</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let autoOn = false, score = {ok: 0, total: 0};
+
+/* ---------- 出题 ---------- */
+async function nextQuiz(auto) {
+  const q = await fetch('/api/quiz-next').then(x => x.json());
+  $('qChar').textContent = q.char;
+  $('qFont').textContent = '· 字体 ' + q.font;
+  $('quizChar').src = 'data:image/png;base64,' + q.img;
+  const body = auto
+    ? {pixels: q.pixels, label: q.char, auto: true}
+    : {pixels: readPad(), label: q.char, auto: false};
+  const res = await fetch('/api/quiz', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  }).then(x => x.json());
+  renderAttempts(q.char, res);
+  updateActivity(res.attempts[res.attempts.length - 1]);
+  drawMiniScatter(res.attempts[res.attempts.length - 1].kc_active || []);
+  return res;
+}
+
+function renderAttempts(char, res) {
+  score.total++;
+  const parts = [`<div>问题 <b>${char}</b>，蝇的尝试：</div>`];
+  let got = false;
+  for (const a of res.attempts) {
+    if (a.correct) { got = true; break; }
+    parts.push(`<span class="wrong">${a.pred}</span>`);
+  }
+  const labels = {first: '一发正解！', second: '第 2 次正解', third: '第 3 次正解', gaveup: '3 次都没读出，放弃了'};
+  if (got) { score.ok++; parts.push(`<span class="right">${res.attempts[res.attempts.length-1].pred}</span> <span style="color:var(--gold); font-size:13px">${labels[res.result]}</span>`); }
+  else parts.push(`<span class="giveup">${labels.gaveup}</span>`);
+  $('attempts').innerHTML = parts.join('');
+  $('score').innerHTML = `${(100 * score.ok / score.total).toFixed(0)}% <small>本页 ${score.ok} / ${score.total} 题正解</small>`;
+}
+
+/* ---------- 自动出题循环 ---------- */
+async function autoLoop() {
+  while (autoOn) {
+    try { await nextQuiz(true); } catch (e) {}
+    await new Promise(r => setTimeout(r, 2500));
+  }
+}
+function toggleAuto() {
+  autoOn = !autoOn;
+  $('btnAuto').textContent = autoOn ? '⏸ 停止自动' : '▶ 开始自动出题';
+  const b = $('autoBadge');
+  b.className = 'badge' + (autoOn ? '' : ' off');
+  b.textContent = autoOn ? '自动出题中' : '自动出题：已停止';
+  if (autoOn) { clearPad(); autoLoop(); }
+}
+
+/* ---------- 手写板 ---------- */
+const pad = $('pad'), pctx = pad.getContext('2d');
+let drawing = false, dirty = false;
+pctx.fillStyle = '#000'; pctx.fillRect(0, 0, 256, 256);
+pctx.lineCap = 'round'; pctx.lineJoin = 'round'; pctx.lineWidth = 16; pctx.strokeStyle = '#fff';
+const pos = e => {
+  const r = pad.getBoundingClientRect(), p = e.touches ? e.touches[0] : e;
+  return [(p.clientX - r.left) * 256 / r.width, (p.clientY - r.top) * 256 / r.height];
+};
+pad.addEventListener('mousedown', e => { drawing = true; dirty = true; const [x, y] = pos(e); pctx.beginPath(); pctx.moveTo(x, y); e.preventDefault(); });
+pad.addEventListener('mousemove', e => { if (!drawing) return; const [x, y] = pos(e); pctx.lineTo(x, y); pctx.stroke(); e.preventDefault(); });
+window.addEventListener('mouseup', () => drawing = false);
+pad.addEventListener('touchstart', e => { drawing = true; dirty = true; const [x, y] = pos(e); pctx.beginPath(); pctx.moveTo(x, y); e.preventDefault(); });
+pad.addEventListener('touchmove', e => { if (!drawing) return; const [x, y] = pos(e); pctx.lineTo(x, y); pctx.stroke(); e.preventDefault(); });
+pad.addEventListener('touchend', () => drawing = false);
+function clearPad() { pctx.fillStyle = '#000'; pctx.fillRect(0, 0, 256, 256); dirty = false; }
+function readPad() {
+  const t = document.createElement('canvas'); t.width = 16; t.height = 16;
+  const c = t.getContext('2d'); c.drawImage(pad, 0, 0, 16, 16);
+  const d = c.getImageData(0, 0, 16, 16).data, px = [];
+  for (let i = 0; i < d.length; i += 4) px.push(d[i] / 255);
+  return px;
+}
+async function submitDraw() {
+  if (!dirty) { $('attempts').innerHTML = '<span style="color:var(--red)">先在上面写一个数字</span>'; return; }
+  $('btnSubmit').disabled = true;
+  try { await nextQuiz(false); } catch (e) { $('attempts').innerHTML = '<span style="color:var(--red)">请求失败</span>'; }
+  $('btnSubmit').disabled = false;
+}
+
+/* ---------- 脑活动侧栏 ---------- */
+const spark = {pn: [], kc: [], frac: []};
+function pushSpark(arr, v) { arr.push(v); if (arr.length > 60) arr.shift(); }
+function drawSpark(id, arr, max) {
+  const cv = $(id), c = cv.getContext('2d');
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.strokeStyle = '#79c0ff'; c.lineWidth = 1.2; c.beginPath();
+  arr.forEach((v, i) => {
+    const x = cv.width - (arr.length - i) * 2.5, y = cv.height - 3 - (cv.height - 8) * Math.min(1, v / max);
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
+  });
+  c.stroke();
+}
+function updateActivity(a) {
+  if (!a) return;
+  pushSpark(spark.pn, a.pn_hz); pushSpark(spark.kc, a.kc_hz); pushSpark(spark.frac, a.kc_frac);
+  drawSpark('sp-pn', spark.pn, Math.max(1, ...spark.pn));
+  drawSpark('sp-kc', spark.kc, Math.max(0.1, ...spark.kc));
+  drawSpark('sp-frac', spark.frac, 0.25);
+  $('hz-pn').textContent = a.pn_hz.toFixed(1) + ' Hz';
+  $('hz-kc').textContent = a.kc_hz.toFixed(2) + ' Hz';
+  $('hz-frac').textContent = (a.kc_frac * 100).toFixed(1) + '%';
+}
+/* 训练流实时镜像（无需出题也有活动） */
+async function pollActivity() {
+  try {
+    const r = await fetch('/api/activity').then(x => x.json());
+    if (r.activity) {
+      updateActivity(r.activity);
+      drawMiniScatter(r.activity.active_kc || []);
+      const lr = r.activity.last_reinforce;
+      $('kcNote').innerHTML = lr
+        ? `最后一次强化：<b>KC #${lr.kc}</b>（群体 ${(lr.frac * 100).toFixed(1)}% 发火）<br>正在看字符 <b>${r.activity.char}</b> · 已呈现 ${(r.activity.t).toLocaleString()} 张`
+        : `正在看字符 <b>${r.activity.char}</b> · 已呈现 ${(r.activity.t).toLocaleString()} 张`;
+    }
+  } catch (e) {}
+}
+setInterval(pollActivity, 1200); pollActivity();
+
+/* ---------- KC 散点 ---------- */
+let kcXY = null;
+fetch('/api/kc-positions').then(r => r.json()).then(r => kcXY = r.xy);
+function drawMiniScatter(activeIds) {
+  if (!kcXY) return;
+  const cv = $('kcMini'), c = cv.getContext('2d');
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.fillStyle = '#30363d';
+  for (const [x, y] of kcXY) c.fillRect(x * cv.width - 1, y * cv.height - 1, 1.6, 1.6);
+  c.fillStyle = '#79c0ff';
+  activeIds.forEach(i => {
+    const [x, y] = kcXY[i];
+    c.fillRect(x * cv.width - 1.5, y * cv.height - 1.5, 2.6, 2.6);
+  });
+}
+
+/* ---------- 训练流 ---------- */
+function renderStream(events) {
+  const el = $('stream');
+  el.innerHTML = '';
+  for (const ev of [...events].reverse()) {
+    const d = document.createElement('div');
+    d.className = 'card ' + (ev.correct ? 'ok' : 'err');
+    d.innerHTML = `<img src="data:image/png;base64,${ev.img}">
+      <div class="pred">蝇读: ${ev.pred}</div><div class="truth">答案: ${ev.char}</div>`;
+    el.appendChild(d);
+  }
+}
+async function tick() {
+  try { renderStream((await fetch('/api/recent').then(x => x.json())).events); } catch (e) {}
+}
+setInterval(tick, 2000); tick();
+</script>
+</body>
+</html>

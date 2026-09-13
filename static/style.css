@@ -1,0 +1,111 @@
+/* FlyLab 全站共用样式（仿 hae.satoru.net 暗色风） */
+:root {
+  --bg: #0d1117; --panel: #161b22; --panel2: #1c2129; --border: #30363d;
+  --text: #e6edf3; --dim: #8b949e; --accent: #7ee787; --red: #ff7b72;
+  --blue: #79c0ff; --gold: #d29922;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 20px 16px 64px; }
+
+/* 顶栏：标题 + 导航 */
+.topbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 0 18px; }
+.topbar h1 { font-size: 22px; letter-spacing: 0.5px; }
+.nav { display: flex; gap: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+.nav a { color: var(--dim); text-decoration: none; padding: 6px 14px; border-radius: 7px; font-size: 14px; }
+.nav a.active { background: var(--panel2); color: var(--text); }
+.nav a:hover { color: var(--text); }
+
+h2 { font-size: 16px; margin: 30px 0 12px; padding-left: 10px; border-left: 3px solid var(--accent); }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.doc { font-size: 13px; color: var(--dim); }
+.doc b { color: var(--text); }
+.doc code { background: #21262d; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+footer { text-align: center; color: var(--dim); font-size: 12px; margin-top: 48px; }
+a { color: var(--blue); }
+
+/* 统计卡 */
+.stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 18px 0; }
+.stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 22px; text-align: center; min-width: 130px; }
+.stat .num { font-size: 24px; font-weight: 700; color: var(--accent); }
+.stat .label { font-size: 12px; color: var(--dim); }
+
+button { background: var(--accent); color: #000; border: 0; border-radius: 8px; padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+button.ghost { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+button:disabled { opacity: 0.45; cursor: default; }
+
+/* 训练流卡片 */
+#stream { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 6px; text-align: center; font-size: 11px; position: relative; }
+.card img { width: 100%; image-rendering: pixelated; border-radius: 4px; background: #000; display: block; }
+.card.ok .pred { color: var(--accent); }
+.card.err { border-color: var(--red); }
+.card.err .pred { color: var(--red); }
+.card .truth { color: var(--dim); }
+
+/* 出题页布局 */
+.quizgrid { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
+@media (max-width: 900px) { .quizgrid { grid-template-columns: 1fr; } }
+.badge { display: inline-block; background: #1a2b1e; color: var(--accent); border: 1px solid #2ea04366; border-radius: 20px; padding: 3px 14px; font-size: 13px; }
+.badge.off { background: var(--panel2); color: var(--dim); border-color: var(--border); }
+#quizChar { width: 256px; height: 256px; image-rendering: pixelated; background: #000; border: 1px solid var(--border); border-radius: 8px; display: block; }
+#pad { background: #000; border: 1px solid var(--border); border-radius: 8px; cursor: crosshair; touch-action: none; display: block; }
+.attempts { margin-top: 10px; font-size: 15px; min-height: 30px; }
+.attempts .wrong { color: var(--red); text-decoration: line-through; margin-right: 8px; }
+.attempts .right { color: var(--accent); font-size: 20px; font-weight: 700; }
+.attempts .giveup { color: var(--red); }
+.score { margin-top: 6px; font-size: 26px; font-weight: 800; }
+.score small { font-size: 13px; color: var(--dim); font-weight: 400; }
+.problem { font-size: 15px; color: var(--dim); margin: 10px 0 6px; }
+.problem b { color: var(--text); font-size: 18px; }
+
+/* 脑活动侧栏 */
+.brainpanel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 12px; }
+.brainpanel h3 { font-size: 13px; margin-bottom: 8px; color: var(--text); }
+.brainpanel h3 .dot { color: var(--accent); }
+.brow { display: grid; grid-template-columns: 86px 1fr 62px; gap: 6px; align-items: center; margin: 6px 0; }
+.brow canvas { width: 100%; height: 26px; display: block; }
+.brow .hz { text-align: right; color: var(--blue); font-variant-numeric: tabular-nums; }
+#kcMini { width: 100%; height: 150px; display: block; background: #000; border-radius: 6px; margin-top: 8px; }
+.kcnote { color: var(--dim); margin-top: 8px; line-height: 1.5; }
+.kcnote b { color: var(--gold); }
+
+/* 掌握度 */
+#mastery { display: flex; gap: 8px; flex-wrap: wrap; }
+.mc { width: 64px; text-align: center; border: 1px solid var(--border); border-radius: 8px; padding: 6px 2px; }
+.mc .c { font-size: 22px; font-weight: 700; }
+.mc .a { font-size: 12px; }
+.mc.unknown { opacity: 0.35; }
+.levelup { color: var(--gold); font-size: 13px; padding: 2px 0; }
+
+/* 作答档案 */
+.recgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.rec { border: 1px solid var(--red); border-radius: 8px; padding: 8px; font-size: 11px; text-align: center; }
+.rec.good { border-color: #2ea043; }
+.rec img { width: 72px; height: 72px; image-rendering: pixelated; background: #000; border-radius: 4px; }
+.rec .cands { margin-top: 4px; }
+.rec .cands .w { color: var(--red); text-decoration: line-through; margin-right: 5px; }
+.rec .cands .r { color: var(--accent); font-weight: 700; }
+.rec .tag { display: inline-block; margin-top: 4px; border-radius: 4px; padding: 1px 8px; font-size: 10px; background: var(--panel2); color: var(--dim); }
+.rec .tag.ok { background: #1a2b1e; color: var(--accent); }
+.rec .tag.bad { background: #2d1517; color: var(--red); }
+
+/* 机制页 */
+.mechgrid { display: grid; grid-template-columns: 200px 1fr; gap: 18px; align-items: start; }
+@media (max-width: 800px) { .mechgrid { grid-template-columns: 1fr; } }
+#mechImg { width: 200px; height: 200px; image-rendering: pixelated; background: #000; border: 1px solid var(--border); border-radius: 8px; }
+.compbar { display: grid; grid-template-columns: 40px 1fr 60px; gap: 10px; align-items: center; margin: 7px 0; font-size: 14px; }
+.compbar .track { background: var(--panel2); border-radius: 5px; height: 14px; overflow: hidden; }
+.compbar .fill { height: 100%; background: var(--blue); border-radius: 5px; }
+.compbar.winner .fill { background: var(--accent); }
+.compbar.winner .cc { color: var(--accent); font-weight: 700; }
+.compbar .val { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+.compbar.winner .val { color: var(--accent); }
+#kcLarge { width: 100%; height: 340px; display: block; background: #000; border-radius: 8px; }
+
+/* 其他页 */
+.linkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.linkcard { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-decoration: none; }
+.linkcard b { color: var(--text); font-size: 15px; }
+.linkcard .desc { color: var(--dim); font-size: 13px; margin-top: 4px; }
+.linkcard.disabled { opacity: 0.55; }

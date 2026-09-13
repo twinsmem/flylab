@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机制 · FlyLab</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>🐝 FlyLab · 一只住在服务器上的果蝇</h1>
+    <nav class="nav">
+      <a href="/">✍️ 出题</a>
+      <a href="/records">🗒️ 记录</a>
+      <a href="/mechanism" class="active">🧠 机制</a>
+      <a href="/about">📖 其他</a>
+    </nav>
+  </div>
+
+  <div class="panel doc">
+    服务器上的蝇正在<b>此刻</b>练习认数字。这里展示它最新一次呈现给神经回路图像时的内部状态：
+    每个字符对应一组 MBON 区画，区画从这幅图收到的输入强度如下 —— <b>受输入最少的区画当选</b>（argmin 读出）。
+    学习前每个区画的基准输入记为 100，训练过的区画被多巴胺削弱后 &lt; 100。
+  </div>
+
+  <h2>区画的输出（最新训练图像 · 候选排序）</h2>
+  <div class="panel">
+    <div class="mechgrid">
+      <div>
+        <img id="mechImg" alt="当前图像">
+        <div class="doc" style="margin-top:8px">正在看字符 <b id="mechChar">–</b><br>已呈现 <b id="mechT">–</b> 张</div>
+      </div>
+      <div id="compBars"><div class="doc">等待训练流…</div></div>
+    </div>
+  </div>
+
+  <h2>凯尼恩细胞的发火（5,177 个 · 双半球示意位置）</h2>
+  <div class="panel"><canvas id="kcLarge" width="1000" height="340"></canvas>
+    <div class="doc" style="margin-top:8px">灰点 = 静息，<span style="color:var(--blue)">蓝点</span> = 此刻发火（约 10% 稀疏度，果蝇嗅觉编码的标志）。
+      位置为示意（萼/柄/叶三簇高斯），非真实 FlyWire 坐标。</div>
+  </div>
+
+  <h2>全透明机制文档</h2>
+  <div class="panel doc">
+    <b>回路</b>：16×16 图像 → 685 个嗅觉投射神经元（PN，泊松发放，最高 270 Hz，每像素 2–3 个 PN 分摊）
+    → 5,177 个凯尼恩细胞（KC，每个随机接收 6–15 个 PN 汇聚，阈值校准至约 10% 稀疏发放）
+    → 20 个蘑菇体输出神经元（MBON，每数字 2 个一组）。<br><br>
+    <b>读出规则</b>：argmin —— 每次呈现 0.4 秒神经时间（10 ms 步长 × 40 bin），
+    统计各区画（每字符 2 个 MBON 列）收到的总输入，<em>受输入最少</em>的区画当选。
+    这对应果蝇蘑菇体的真实读出方向：多巴胺削弱 = 吸引行为。<br><br>
+    <b>学习规则（只在答错时施加）</b>：正确答案区画注入多巴胺，削弱其间活跃的 KC→MBON 连接
+    （抗赫布规则，Hige et al. 2015）；被误选的区画接受反向信号增强连接（对应 Handler et al. 2019）。
+    因此"削弱正确区画" = 下次它更容易赢。<br><br>
+    <b>课程</b>：第 1 段学 0–4，每练 1500 张用 5 种<em>从未见过的字体</em>测试，≥75% 解锁第 2 段（0–9）。<br><br>
+    <b>布线说明</b>：当前使用符合 FlyWire 实测统计的合成连接（每 KC 收 6–15 个 PN），
+    接入真实连接组只需替换连接矩阵（neuprint.janelia.org 公开可查）。<br><br>
+    <b>诚实的局限</b>：这是速率近似 + 随机稀疏发放模型，不是完整电生理仿真；KC 位置是示意而非解剖坐标；
+    正确率提升不证明它"理解"了数字 —— 但学习曲线、稀疏编码、抗赫布可塑性的方向都与真实回路一致。
+  </div>
+
+  <footer>FlyLab · 灵感来自 <a href="https://hae.satoru.net/" target="_blank">hae.satoru.net</a> · 训练与网站运行于局域网服务器</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const CLASSES = ['0','1','2','3','4','5','6','7','8','9'];
+
+/* ---------- 区画条形图 + 当前图像 ---------- */
+let lastComp = null;
+async function pollActivity() {
+  try {
+    const r = await fetch('/api/activity').then(x => x.json());
+    const a = r.activity;
+    if (!a) return;
+    $('mechImg').src = 'data:image/png;base64,' + a.img;
+    $('mechChar').textContent = a.char;
+    $('mechT').textContent = a.t.toLocaleString();
+    if (a.comp && a.comp !== lastComp) { lastComp = a.comp; renderBars(a.comp); }
+    drawLarge(a.active_kc || []);
+  } catch (e) {}
+}
+function renderBars(comp) {
+  const entries = Object.entries(comp).sort((x, y) => x[1] - y[1]);
+  const winner = entries[0][0];
+  const el = $('compBars');
+  el.innerHTML = '';
+  for (const [c, v] of entries) {
+    const d = document.createElement('div');
+    d.className = 'compbar' + (c === winner ? ' winner' : '');
+    const w = Math.max(2, Math.min(100, (v / 120) * 100));
+    d.innerHTML = `<span class="cc">${c}</span>
+      <div class="track"><div class="fill" style="width:${w}%"></div></div>
+      <span class="val">${v.toFixed(1)}</span>`;
+    el.appendChild(d);
+  }
+}
+setInterval(pollActivity, 1200); pollActivity();
+
+/* ---------- KC 大散点 ---------- */
+let kcXY = null;
+fetch('/api/kc-positions').then(r => r.json()).then(r => kcXY = r.xy);
+function drawLarge(activeIds) {
+  if (!kcXY) return;
+  const cv = $('kcLarge'), c = cv.getContext('2d');
+  c.clearRect(0, 0, cv.width, cv.height);
+  c.fillStyle = '#30363d';
+  for (const [x, y] of kcXY) c.fillRect(x * cv.width - 1, y * cv.height - 1, 1.6, 1.6);
+  c.fillStyle = '#79c0ff';
+  activeIds.forEach(i => {
+    const [x, y] = kcXY[i];
+    c.fillRect(x * cv.width - 1.5, y * cv.height - 1.5, 2.8, 2.8);
+  });
+}
+</script>
+</body>
+</html>

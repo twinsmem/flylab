@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记录 · FlyLab</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>🐝 FlyLab · 一只住在服务器上的果蝇</h1>
+    <nav class="nav">
+      <a href="/">✍️ 出题</a>
+      <a href="/records" class="active">🗒️ 记录</a>
+      <a href="/mechanism">🧠 机制</a>
+      <a href="/about">📖 其他</a>
+    </nav>
+  </div>
+
+  <h2>服务器蝇的成绩</h2>
+  <div class="stats">
+    <div class="stat"><div class="num" id="st-level">–</div><div class="label">当前课程段</div></div>
+    <div class="stat"><div class="num" id="st-count">–</div><div class="label">累计练习张数</div></div>
+    <div class="stat"><div class="num" id="st-train">–</div><div class="label">练习正确率（近500）</div></div>
+    <div class="stat"><div class="num" id="st-test">–</div><div class="label">未见字体测试</div></div>
+  </div>
+
+  <h2>正确率曲线（绿 = 练习中 · 蓝 = 未见字体测试 · 竖线 = 升段）</h2>
+  <div class="panel"><canvas id="chart" width="1120" height="220" style="width:100%"></canvas></div>
+
+  <h2>逐字符掌握度（未见字体测试 · 暗色 = 尚未学习）</h2>
+  <div class="panel"><div id="mastery"></div><div id="levelups" style="margin-top:12px"></div></div>
+
+  <h2>作答档案 — 蝇是怎么读的</h2>
+  <div class="panel">
+    <div class="doc" id="recSummary" style="margin-bottom:12px">加载中…</div>
+    <div style="display:flex; gap:8px; margin-bottom:12px" id="recTabs">
+      <button class="ghost" id="tabAll" onclick="setTab('all')">全部</button>
+      <button class="ghost" id="tabCrowd" onclick="setTab('crowd')">访客手写</button>
+      <button class="ghost" id="tabAuto" onclick="setTab('auto')">自动出题</button>
+    </div>
+    <div class="recgrid" id="recGrid"></div>
+    <div class="doc" style="margin-top:12px">划线字符 = 被淘汰的错误候选；绿框 = 3 次内读出，红框 = 放弃。
+      <b>所有作答仅公开存档，不用于训练</b>——蝇的练习数据只有训练字体生成的图。</div>
+  </div>
+
+  <footer>FlyLab · 灵感来自 <a href="https://hae.satoru.net/" target="_blank">hae.satoru.net</a> · 训练与网站运行于局域网服务器</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let recTab = 'all';
+
+/* ---------- 成绩 + 曲线 + 掌握度 ---------- */
+async function tick() {
+  try {
+    const s = await fetch('/api/state').then(x => x.json());
+    $('st-level').textContent = s.level;
+    $('st-count').textContent = s.presented.toLocaleString();
+    const tc = s.train_curve, xc = s.test_curve;
+    $('st-train').textContent = tc.length ? (tc[tc.length-1][1]*100).toFixed(1) + '%' : '–';
+    $('st-test').textContent = xc.length ? (xc[xc.length-1][1]*100).toFixed(1) + '%' : '–';
+    renderMastery(s); drawChart(s);
+  } catch (e) {}
+}
+function renderMastery(s) {
+  const el = $('mastery');
+  const known = new Set(s.classes_now);
+  el.innerHTML = '';
+  for (const c of ['0','1','2','3','4','5','6','7','8','9']) {
+    const acc = (s.mastery && s.mastery[c] !== undefined) ? s.mastery[c] : null;
+    const d = document.createElement('div');
+    d.className = 'mc' + (known.has(c) ? '' : ' unknown');
+    const hue = acc === null ? 0 : Math.round(acc * 120);
+    d.innerHTML = `<div class="c" style="color:hsl(${hue},70%,60%)">${c}</div>
+      <div class="a">${acc === null ? '未学' : (acc*100).toFixed(0) + '%'}</div>`;
+    el.appendChild(d);
+  }
+  $('levelups').innerHTML = (s.level_events || []).map(e =>
+    `<div class="levelup">★ t=${e.t.toLocaleString()} 升入第 ${e.level} 段（测试 ${(e.acc*100).toFixed(1)}%）</div>`).join('');
+}
+function drawChart(s) {
+  const cv = $('chart'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#30363d';
+  for (let i = 0; i <= 4; i++) {
+    const y = 10 + (H - 30) * i / 4;
+    ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W - 10, y); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif';
+    ctx.fillText((100 - i * 25) + '%', 6, y + 4);
+  }
+  const all = [...s.train_curve, ...s.test_curve];
+  if (!all.length) return;
+  const tMax = Math.max(1500, all[all.length-1][0]);
+  const X = t => 40 + (W - 50) * t / tMax;
+  const Y = v => 10 + (H - 30) * (1 - v);
+  const line = (curve, color) => {
+    if (curve.length < 2) return;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    curve.forEach(([t, v], i) => i ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v)));
+    ctx.stroke();
+  };
+  line(s.train_curve, '#7ee787');
+  line(s.test_curve, '#79c0ff');
+  ctx.strokeStyle = '#d29922'; ctx.setLineDash([4, 4]);
+  (s.level_events || []).forEach(e => {
+    ctx.beginPath(); ctx.moveTo(X(e.t), 10); ctx.lineTo(X(e.t), H - 20); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+}
+setInterval(tick, 3000); tick();
+
+/* ---------- 作答档案 ---------- */
+const TAGS = {
+  first:  ['一发正解', 'ok'], second: ['第 2 次正解', 'ok'], third: ['第 3 次正解', 'ok'],
+  gaveup: ['3 次未读出', 'bad']
+};
+function setTab(t) {
+  recTab = t;
+  for (const [id, key] of [['tabAll', 'all'], ['tabCrowd', 'crowd'], ['tabAuto', 'auto']])
+    $(id).style.background = key === t ? '#2ea04333' : 'transparent';
+  loadRecords();
+}
+async function loadRecords() {
+  try {
+    const r = await fetch('/api/records').then(x => x.json());
+    const su = r.summary;
+    $('recSummary').innerHTML = su.total
+      ? `共 <b>${su.total}</b> 件作答 · 一发正解 <b>${(su.first_rate*100).toFixed(0)}%</b> · 3 次内正解 <b>${(su.within3_rate*100).toFixed(0)}%</b>`
+      : '还没有作答记录 — 去<a href="/">出题页</a>考考它';
+    const evs = recTab === 'all' ? [...r.crowd, ...r.auto] : r[recTab];
+    const el = $('recGrid');
+    el.innerHTML = '';
+    for (const ev of evs) {
+      const wrongs = [];
+      let final = null;
+      for (const a of ev.attempts) {
+        if (a.correct) { final = a.pred; break; }
+        wrongs.push(a.pred);
+      }
+      const [txt, cls] = TAGS[ev.result] || ['?', ''];
+      const d = document.createElement('div');
+      d.className = 'rec' + (ev.result === 'gaveup' ? '' : ' good');
+      d.innerHTML = `<img src="data:image/png;base64,${ev.img}">
+        <div class="cands">${wrongs.map(w => `<span class="w">${w}</span>`).join('')}${final ? `<span class="r">${final}</span>` : ''}</div>
+        <div class="doc" style="font-size:10px">问题 ${ev.char} · ${ev.kind === 'auto' ? '自动' : '手写'} ${ev.time || ''}</div>
+        <span class="tag ${cls}">${txt}</span>`;
+      el.appendChild(d);
+    }
+  } catch (e) {}
+}
+setInterval(loadRecords, 5000); loadRecords();
+</script>
+</body>
+</html>

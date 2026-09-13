@@ -46,6 +46,39 @@ class MushroomBody:
         # 每个 MBON 只连接一部分 KC（~12%），其余强制为 0，贴近真实区画输入稀疏性
         mask = self.rng.random((self.n_kc, self.n_mbon)) < 0.12
         self.w = np.where(mask, self.w, np.float32(0.0)).astype(np.float32)
+        # 区画输入基线（学習前=100 归一化用）：每列初始权重总和
+        self.col_sum0 = self.w.sum(axis=0).astype(np.float32)
+        # KC 二维示意位置（双半球蘑菇体轮廓，仅用于可视化）
+        self.kc_xy = self._build_kc_positions()
+        # 最近一次活动/强化快照（供网站展示）
+        self.last_activity = None   # present() 填充
+        self.last_reinforce = None  # reinforce() 填充
+
+    def _build_kc_positions(self, seed=123):
+        """生成 5,177 个 KC 的二维示意位置：双半球，每半球 = 萼+柄+叶 三簇高斯。"""
+        rng = np.random.default_rng(seed)
+        blobs = [  # (cx, cy, sx, sy, 比例) —— 近似蘑菇体轮廓
+            (0.30, 0.35, 0.10, 0.12, 0.55),  # 蕈体萼（细胞体聚集）
+            (0.42, 0.55, 0.05, 0.13, 0.25),  # 中柄
+            (0.46, 0.78, 0.09, 0.06, 0.20),  # 输出叶
+        ]
+        pts = []
+        for mirror in (False, True):
+            for cx, cy, sx, sy, wt in blobs:
+                n = int(round(self.n_kc / 2 * wt))
+                x = rng.normal(cx, sx, n)
+                y = rng.normal(cy, sy, n)
+                if mirror:
+                    x = 1.0 - x
+                pts.append(np.stack([x, y], axis=1))
+        xy = np.concatenate(pts).astype(np.float32)
+        if len(xy) >= self.n_kc:
+            xy = xy[:self.n_kc]
+        else:  # 取整误差补齐
+            extra = rng.integers(0, len(xy), size=self.n_kc - len(xy))
+            xy = np.concatenate([xy, xy[extra]])
+        np.clip(xy, 0.02, 0.98, out=xy)
+        return xy
 
     # ---------- 布线 ----------
     def _build_pn_map(self, img_px):
@@ -112,7 +145,32 @@ class MushroomBody:
         p = 1.0 / (1.0 + np.exp(-(kc_in - self.kc_theta) * 6.0))
         kc_spikes = rng.random(self.n_kc) < p
         mbon_input = kc_spikes.astype(np.float32) @ self.w
+        n_active = int(kc_spikes.sum())
+        self.last_activity = {
+            "pn_hz": float(rate.mean()),          # 全体 PN 平均发放率
+            "kc_active": n_active,                # 本次发火的 KC 数
+            "kc_frac": float(kc_spikes.mean()),   # KC 群体稀疏度
+            "kc_hz": float(kc_spikes.mean() / SIM_T),  # 单 KC 平均发放率
+            "t": self.t_present,
+        }
         return kc_spikes, mbon_input
+
+    def comp_values(self, mbon_input, n_active, active_classes=None):
+        """各区画对当前图像的输入强度，「学習前 = 100」归一化（仿原站 しくみ 页）。
+
+        基线 = 初始权重下同等数量活跃 KC 的期望输入（按活跃比例缩放的列和）。
+        学习会削弱势区画的列和 → 训练过的区画数值 < 100；argmin 当选。
+        """
+        if n_active < 5:
+            return {c: 100.0 for c in range(self.n_classes)}
+        base = self.col_sum0.reshape(self.n_classes, self.mpc).sum(axis=1)
+        cur = mbon_input.reshape(self.n_classes, self.mpc).sum(axis=1)
+        scale = base * (n_active / self.n_kc)
+        scale = np.where(scale <= 0, 1e-9, scale)
+        vals = 100.0 * cur / scale
+        if active_classes is not None:
+            return {int(c): float(vals[c]) for c in active_classes}
+        return {c: float(vals[c]) for c in range(self.n_classes)}
 
     def decide(self, mbon_input, active_classes):
         """argmin 读出：active_classes 中受输入最少的区画对应的类别当选。"""
@@ -135,14 +193,25 @@ class MushroomBody:
                                     W_MIN, W_MAX)
         self.w[:, cols_c] = np.clip(self.w[:, cols_c] + ETA_POTENT * act[:, None],
                                     W_MIN, W_MAX)
+        # 记录「这次学到最多」的 KC：活跃且对两个被修改区画连接权重最大的那个
+        impact = act * (self.w[:, cols_t].sum(axis=1) + self.w[:, cols_c].sum(axis=1))
+        self.last_reinforce = {
+            "kc": int(np.argmax(impact)),
+            "frac": float(act.mean()),
+            "t": self.t_present,
+        }
 
     # ---------- 持久化 ----------
     def save(self, path):
-        np.savez_compressed(path, w=self.w, theta=self.kc_theta, t=self.t_present)
+        np.savez_compressed(path, w=self.w, theta=self.kc_theta, t=self.t_present,
+                            col_sum0=self.col_sum0)
 
     def load(self, path):
         z = np.load(path)
         self.w, self.kc_theta, self.t_present = z["w"], float(z["theta"]), int(z["t"])
+        # 旧存档没有基线：以当前权重为基线（此后学习相对此刻归一）
+        self.col_sum0 = (z["col_sum0"] if "col_sum0" in z
+                         else self.w.sum(axis=0).astype(np.float32))
 
 
 DT_BINS = np.arange(int(round(SIM_T / DT)))

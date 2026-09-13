@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>其他 · FlyLab</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>🐝 FlyLab · 一只住在服务器上的果蝇</h1>
+    <nav class="nav">
+      <a href="/">✍️ 出题</a>
+      <a href="/records">🗒️ 记录</a>
+      <a href="/mechanism">🧠 机制</a>
+      <a href="/about" class="active">📖 其他</a>
+    </nav>
+  </div>
+
+  <h2>这只蝇的任务</h2>
+  <div class="linkgrid">
+    <div class="linkcard">
+      <b>✍️ 数字识别</b>
+      <div class="desc">运行中 —— 0–9 两段课程，5,177 个 KC 的蘑菇体回路，答错才给多巴胺。见<a href="/">出题页</a>。</div>
+    </div>
+    <div class="linkcard disabled">
+      <b>💱 交易蝇（计划中）</b>
+      <div class="desc">用蘑菇体回路替代固定读出层做模拟盘交易：K 线 16×16 → 买/卖/持有三区画，盈亏作多巴胺信号。有真正的可塑性，比 Stonkfly 的全脑+固定读出更能回答"它到底能不能学会"。</div>
+    </div>
+    <div class="linkcard disabled">
+      <b>🈚 平假名（计划中）</b>
+      <div class="desc">46 字符十段课程的完整复刻，对应 hae.satoru.net 原任务。</div>
+    </div>
+  </div>
+
+  <h2>源码与数据</h2>
+  <div class="linkgrid">
+    <a class="linkcard" href="https://github.com/twinsmem/flylab" target="_blank">
+      <b>GitHub · twinsmem/flylab</b>
+      <div class="desc">全部源码（MIT）· 训练状态与作答档案存于服务器 data/ 目录</div>
+    </a>
+    <a class="linkcard" href="https://hae.satoru.net/" target="_blank">
+      <b>hae.satoru.net</b>
+      <div class="desc">本站设计灵感来源 —— 学平假名的服务器之蝇（MIT，含训练好的脑与学习记录）</div>
+    </a>
+    <a class="linkcard" href="https://male-cns.janelia.org/" target="_blank">
+      <b>MaleCNS / FlyWire 连接组</b>
+      <div class="desc">果蝇全脑接线图（CC-BY 4.0）—— 本站合成布线的统计特征来源</div>
+    </a>
+  </div>
+
+  <h2>用到的库 · 数据 · 字体</h2>
+  <div class="panel doc">
+    <b>NumPy</b> —— 仿真内核与稀疏矩阵运算 · <b>Pillow</b> —— 字体渲染与形变 ·
+    <b>FastAPI + Uvicorn</b> —— 网站与 API ·
+    <b>Google Fonts</b>（Roboto / OpenSans / Lato / Montserrat / Oswald 练习，Merriweather / NotoSans / PTSans / Ubuntu / SourceSans3 测试 —— SIL Open Font License）<br><br>
+    <b>学习规则文献</b>：Hige et al. 2015（抗赫布多巴胺削弱）· Handler et al. 2019（时序反向增强）·
+    Aso et al. 2014（蘑菇体区画划分）<br><br>
+    <b>自研部分</b>：仿真内核、训练循环、网站界面、课程化逻辑 —— 均为本项目原创。
+    本站访客的手写作答仅公开存档展示，<b>永不用于训练</b>。
+  </div>
+
+  <h2>运维</h2>
+  <div class="panel doc">
+    <b>训练进程</b>：随网站启动，每 500 张自动存盘（<code>data/state/brain.npz</code>），重启自动续训。<br>
+    <b>启动</b>：<code>bash scripts/start.sh</code> · <b>停止</b>：<code>kill $(cat logs/web.pid)</code> · <b>日志</b>：<code>logs/web.log</code>
+  </div>
+
+  <footer>FlyLab · 灵感来自 <a href="https://hae.satoru.net/" target="_blank">hae.satoru.net</a> 与 FlyWire/MaleCNS 连接组计划</footer>
+</div>
+</body>
+</html>
