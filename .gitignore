@@ -1,0 +1,14 @@
+# 运行时状态与日志（不入库）
+data/state/
+data/fonts/
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# 本地测试产物
+/tmp/
