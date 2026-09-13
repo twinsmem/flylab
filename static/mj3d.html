@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>three.js 3D · FlyLab</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .stage { height: 560px; }
+  #mjNotice { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+              color: var(--dim); font-size: 15px; text-align: center; padding: 20px; }
+  body.nomj #mjNotice { display: flex; }
+  .hud .val { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .legend { font-size: 13px; color: var(--dim); line-height: 1.8; }
+  .legend b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>🪰 FlyLab · three.js 3D 果蝇</h1>
+    <nav class="nav">
+      <a href="/">✍️ 出题</a>
+      <a href="/records">🗒️ 记录</a>
+      <a href="/mechanism">🧠 机制</a>
+      <a href="/about">📖 其他</a>
+      <a href="/mj">🧪 物理3D</a>
+      <a href="/mj3d" class="active">🕸️ three.js版</a>
+    </nav>
+  </div>
+
+  <div class="stage" id="stageWrap">
+    <div id="stage3d"></div>
+    <div id="mjNotice">MuJoCo 位姿仿真不可用（本机未装 mujoco 或模型缺失）。</div>
+
+    <div class="hud hud-tl">
+      <span class="badge lvbadge">flybody 模型 × three.js 渲染</span>
+      <span class="badge" id="fpsBadge">加载中…</span>
+    </div>
+    <div class="hud hud-top" id="simBadge">仿真 <b class="val" id="simT">–</b> s · 实时率
+      <b class="val" id="rtf">–</b>× · 接触点 <b class="val" id="ncon">–</b></div>
+    <div class="hud hud-bl">
+      <div class="legend">
+        <b>TuragaLab/flybody</b> 官方模型网格（68 刚体），服务端 MuJoCo 物理求解三角步态，
+        位姿经 WebSocket 推流，浏览器 three.js 实时渲染。<br>
+        材质为 three.js 重建（官方半透明角质层在此强制不透明以免穿帮）。
+        拖拽旋转 · 滚轮缩放 · 双击复位。
+        对比 <a href="/mj" target="_blank">官方物理渲染版 /mj</a>。
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <div class="doc">
+      <b>两种 3D 方案</b>：本页 = 服务端物理 + 浏览器 three.js 网格渲染（60fps 顺滑、可自由环绕）；
+      <a href="/mj" target="_blank">/mj</a> = 官方 walk_imitation 任务 + osmesa 离屏渲染 MJPEG 推流
+      （材质/光照/ghost 参考点为官方原件，但软渲染仅 2-3 fps 慢动作）。
+    </div>
+  </div>
+
+  <footer>FlyLab · 模型来源 <a href="https://github.com/TuragaLab/flybody" target="_blank">TuragaLab/flybody</a>
+    (Apache-2.0)</footer>
+</div>
+
+<script src="/static/vendor/three.min.js"></script>
+<script src="/static/mj3d.js"></script>
+</body>
+</html>
