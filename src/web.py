@@ -17,6 +17,7 @@ import threading
 import numpy as np
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .training import Trainer, IMG_PX, LEVEL_CLASSES, img_to_b64
@@ -25,6 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
 
 app = FastAPI(title="FlyLab")
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
 trainer: Trainer = None  # type: ignore
 _kc_xy_cache = None
 
