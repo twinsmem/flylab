@@ -37,6 +37,12 @@
   rim.position.set(-3, 2, -2);
   scene.add(rim);
 
+  /* MuJoCo 为 Z 轴朝上，three.js 为 Y 轴朝上：
+     所有刚体挂到这个绕 X 轴 -90° 的父组下，整体完成坐标框架转换 */
+  var worldGroup = new THREE.Group();
+  worldGroup.rotation.x = -Math.PI / 2;
+  scene.add(worldGroup);
+
   /* 地面：暗色板 + 1mm 网格 */
   scene.add(new THREE.Mesh(
     new THREE.PlaneGeometry(60, 60),
@@ -59,7 +65,8 @@
   /* ---------- 轨道相机（拖拽旋转 / 滚轮缩放 / 双击复位） ---------- */
   var orbit = { yaw: 0.7, pitch: 0.55, dist: 1.6 };
   var orbitHome = { yaw: 0.7, pitch: 0.55, dist: 1.6 };
-  var followTarget = new THREE.Vector3(0, 0, 0.1);
+  var followTarget = new THREE.Vector3(0, 0.1, 0);
+  var tmpV = new THREE.Vector3();
   var dragging = false, lastX = 0, lastY = 0;
 
   function applyCamera() {
@@ -304,11 +311,12 @@
       groups.push(g);   // 位姿归零；首帧 WS 到达后直接写世界位姿
       if (b.name === "thorax") thoraxIdx = i;
     });
-    /* MuJoCo WS 帧给的是每个刚体的世界系位姿(xpos/xquat) → 全部平铺直挂 scene，
-       若按身体树嵌套会把世界位姿再乘父级变换，导致整蝇炸散 */
+    /* MuJoCo WS 帧给的是每个刚体的世界系位姿(xpos/xquat) → 全部平铺直挂 worldGroup
+       （挂进身体树会把世界位姿再乘父级变换，导致整蝇炸散；
+       worldGroup 的 -90° 旋转负责 MuJoCo Z-up → three.js Y-up 转换） */
     parsed.bodies.forEach(function (b, i) {
       if (i === 0) return;
-      scene.add(groups[i]);
+      worldGroup.add(groups[i]);
     });
     /* 材质缓存 + geom mesh 实例化 */
     var matCache = {};
@@ -379,9 +387,11 @@
       }
       if (thoraxIdx > 0) {
         var o7 = thoraxIdx * 7;
-        followTarget.lerp(new THREE.Vector3(latest[o7], latest[o7 + 1], latest[o7 + 2]), 0.08);
+        /* MuJoCo (x,y,z) → three (x, z, -y)；高度取 MuJoCo z */
+        var mx = latest[o7], my = latest[o7 + 1], mz = latest[o7 + 2];
+        followTarget.lerp(tmpV.set(mx, mz, -my), 0.08);
         shadow.position.x = followTarget.x; shadow.position.z = followTarget.z;
-        shadow.material.opacity = Math.max(0.12, 0.4 - latest[o7 + 2] * 1.2);
+        shadow.material.opacity = Math.max(0.12, 0.4 - mz * 1.2);
       }
       applyCamera();
       renderer.render(scene, camera);
