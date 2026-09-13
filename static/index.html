@@ -70,7 +70,7 @@
     <div class="stat"><div class="num" id="st-count">–</div><div class="label">累计练习张数</div></div>
     <div class="stat"><div class="num" id="st-train">–</div><div class="label">练习正确率（近500）</div></div>
     <div class="stat"><div class="num" id="st-test">–</div><div class="label">未见字体测试</div></div>
-    <div class="stat"><div class="num" id="st-kc">2,500</div><div class="label">凯尼恩细胞</div></div>
+    <div class="stat"><div class="num" id="st-kc">5,177</div><div class="label">凯尼恩细胞</div></div>
   </div>
 
   <h2>实时训练流（最新 30 张，红框 = 答错）</h2>
@@ -103,7 +103,7 @@
   <h2>机制（全透明）</h2>
   <div class="panel doc">
     <b>回路</b>：16×16 图像 → 685 个嗅觉投射神经元（泊松发放，最高 270 Hz，每像素 2–3 个 PN 分摊）
-    → 2,500 个凯尼恩细胞（每个随机接收 6–15 个 PN 汇聚，阈值校准至约 10% 稀疏发放）
+    → 5,177 个凯尼恩细胞（每个随机接收 6–15 个 PN 汇聚，阈值校准至约 10% 稀疏发放）
     → 20 个蘑菇体输出神经元（MBON，每数字 2 个一组）。
     <b>读出规则</b>：argmin —— 受输入<em>最少</em>的区画当选。
     <b>学习</b>：只在答错时施加。正确答案区画注入多巴胺，削弱其间活跃的 KC→MBON 连接（抗赫布规则，Hige et al. 2015）；

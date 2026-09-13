@@ -74,7 +74,7 @@ def img_to_b64(arr256, upscale=8):
 class Trainer:
     def __init__(self):
         os.makedirs(STATE_DIR, exist_ok=True)
-        self.brain = MushroomBody(n_classes=10)
+        self.brain = MushroomBody(n_pn=685, n_kc=5177, n_classes=10)
         self.level = 1
         self.log_path = os.path.join(STATE_DIR, "log.jsonl")
         self.metrics_path = os.path.join(STATE_DIR, "metrics.json")
