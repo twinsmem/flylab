@@ -18,46 +18,52 @@
     </nav>
   </div>
 
-  <div class="quizgrid">
-    <!-- 左：出题 -->
-    <div class="panel">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
-        <span class="badge off" id="autoBadge">自动出题：已停止</span>
-        <span class="doc">蝇只练过 5 种印刷字体 · <b>Merriweather</b> 等测试字体它从未见过</span>
-      </div>
+  <!-- 3D 舞台 -->
+  <div class="stage" id="stageWrap">
+    <div id="stage3d"></div>
+    <img id="fallbackImg" class="fallback" alt="题目（3D 不可用时的回退显示）">
 
-      <div class="problem">问题 <b id="qChar">–</b> <span id="qFont" style="font-size:12px"></span></div>
-      <img id="quizChar" alt="题目">
-
-      <div class="problem" style="margin-top:14px">你来写给它看（写在下面黑框里）</div>
-      <div style="display:flex; gap:20px; flex-wrap:wrap">
-        <div>
-          <canvas id="pad" width="256" height="256"></canvas>
-          <div style="margin-top:10px">
-            <button id="btnSubmit" onclick="submitDraw()">提交给蝇</button>
-            <button class="ghost" onclick="clearPad()">擦掉</button>
-            <button class="ghost" id="btnAuto" onclick="toggleAuto()">▶ 开始自动出题</button>
-          </div>
-        </div>
-        <div style="flex:1; min-width:220px">
-          <div class="attempts" id="attempts">蝇在等待题目…</div>
-          <div class="score" id="score"><small>本页 0 / 0 题正解</small></div>
-          <div class="doc" style="margin-top:10px">提交后蝇最多尝试 3 次（每次神经噪声不同）：
-            <b style="color:var(--accent)">一发正解</b> / 第 2 次 / 第 3 次 / 放弃。
-            所有作答公开存档于<a href="/records">记录页</a>，<b>不用于训练</b>。</div>
-        </div>
-      </div>
+    <div class="hud hud-tl">
+      <span class="badge lvbadge" id="lvBadge">Lv –</span>
+      <span class="badge off" id="autoBadge">自动出题：已停止</span>
+    </div>
+    <button class="hud hud-tr ghost" id="brainToggle" onclick="toggleBrain()">🧠 脑</button>
+    <div class="hud hud-top" id="hudProblem">问题 <b>–</b> <span id="qFont"></span></div>
+    <div class="hud hud-bl">
+      <div class="attempts" id="attempts">蝇在等待题目…</div>
+      <div class="score" id="score"><small>本页 0 / 0 题正解</small></div>
     </div>
 
-    <!-- 右：脑活动侧栏 -->
-    <div class="brainpanel">
-      <h3><span class="dot">●</span> 脑活动 <span style="color:var(--dim); font-weight:400">· 实时镜像</span></h3>
+    <!-- 脑活动抽屉 -->
+    <div class="brainpanel" id="brainPanel">
+      <div class="brainhead"><span class="dot">●</span> 脑活动 · 实时镜像 <span class="brainx" onclick="toggleBrain()">✕</span></div>
       <div class="brow"><span>投射 PN</span><canvas id="sp-pn" width="150" height="26"></canvas><span class="hz" id="hz-pn">–</span></div>
       <div class="brow"><span>凯尼恩 KC</span><canvas id="sp-kc" width="150" height="26"></canvas><span class="hz" id="hz-kc">–</span></div>
       <div class="brow"><span>KC 稀疏度</span><canvas id="sp-frac" width="150" height="26"></canvas><span class="hz" id="hz-frac">–</span></div>
       <canvas id="kcMini" width="280" height="150"></canvas>
       <div class="kcnote" id="kcNote">等待神经活动…</div>
-      <div class="kcnote" style="margin-top:6px">散点 = 5,177 个 KC 的示意位置（双半球）。<span style="color:var(--blue)">蓝点</span> = 此刻发火的细胞。</div>
+      <div class="kcnote" style="margin-top:6px">散点 = 5,177 个 KC 的示意位置（双半球）。<span style="color:var(--blue)">蓝点</span> = 此刻发火。</div>
+    </div>
+  </div>
+
+  <!-- 控制区 -->
+  <div class="panel" style="margin-top:14px">
+    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start">
+      <div>
+        <div class="doc" style="margin-bottom:6px">你也来考它：写一个 <b id="padHint">0–9</b>（要和上面的问题一致）</div>
+        <canvas id="pad" width="256" height="256"></canvas>
+        <div style="margin-top:10px">
+          <button id="btnSubmit" onclick="submitDraw()">提交给蝇</button>
+          <button class="ghost" onclick="clearPad()">擦掉</button>
+          <button class="ghost" id="btnAuto" onclick="toggleAuto()">▶ 开始自动出题</button>
+        </div>
+      </div>
+      <div style="flex:1; min-width:240px">
+        <div class="doc">蝇最多尝试 3 次（每次神经噪声不同）：<b style="color:var(--accent)">一发正解</b> /
+          第 2 次 / 第 3 次 / 放弃。它会用前腿把<b>自己的答案</b>写在 3D 地面上——答错划掉重写，答对多巴胺爆发。
+          所有作答公开存档于<a href="/records">记录页</a>，<b>不用于训练</b>。<br><br>
+          拖拽旋转视角 · 滚轮缩放。</div>
+      </div>
     </div>
   </div>
 
@@ -67,49 +73,83 @@
   <footer>FlyLab · 灵感来自 <a href="https://hae.satoru.net/" target="_blank">hae.satoru.net</a> · 训练与网站运行于局域网服务器</footer>
 </div>
 
+<script src="/static/vendor/three.min.js"></script>
+<script src="/static/quiz3d.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-let autoOn = false, score = {ok: 0, total: 0};
+let autoOn = false, busy = false;
+let score = { ok: 0, total: 0 };
+let curQ = null;
+const has3D = () => window.Fly3D && Fly3D.ready;
 
-/* ---------- 出题 ---------- */
-async function nextQuiz(auto) {
-  const q = await fetch('/api/quiz-next').then(x => x.json());
-  $('qChar').textContent = q.char;
-  $('qFont').textContent = '· 字体 ' + q.font;
-  $('quizChar').src = 'data:image/png;base64,' + q.img;
-  const body = auto
-    ? {pixels: q.pixels, label: q.char, auto: true}
-    : {pixels: readPad(), label: q.char, auto: false};
-  const res = await fetch('/api/quiz', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body)
-  }).then(x => x.json());
-  renderAttempts(q.char, res);
-  updateActivity(res.attempts[res.attempts.length - 1]);
-  drawMiniScatter(res.attempts[res.attempts.length - 1].kc_active || []);
-  return res;
+/* ---------- 出题流程 ---------- */
+async function fetchProblem() {
+  curQ = await fetch('/api/quiz-next').then(x => x.json());
+  const unseen = ['Merriweather', 'NotoSans', 'PTSans', 'Ubuntu', 'SourceSans3'].includes(curQ.font);
+  $('hudProblem').innerHTML = `问题 <b>${curQ.char}</b> <span style="color:var(--dim)">· 字体 ${curQ.font}${unseen ? '（它没见过）' : ''}</span>`;
+  $('fallbackImg').src = 'data:image/png;base64,' + curQ.img;
+  if (has3D()) Fly3D.newProblem();
 }
 
-function renderAttempts(char, res) {
-  score.total++;
+function hudAttempts(char, attempts, finalResult) {
   const parts = [`<div>问题 <b>${char}</b>，蝇的尝试：</div>`];
-  let got = false;
-  for (const a of res.attempts) {
-    if (a.correct) { got = true; break; }
+  for (let i = 0; i < attempts.length; i++) {
+    const a = attempts[i];
+    if (a.correct) { parts.push(`<span class="right">${a.pred}</span>`); break; }
     parts.push(`<span class="wrong">${a.pred}</span>`);
   }
-  const labels = {first: '一发正解！', second: '第 2 次正解', third: '第 3 次正解', gaveup: '3 次都没读出，放弃了'};
-  if (got) { score.ok++; parts.push(`<span class="right">${res.attempts[res.attempts.length-1].pred}</span> <span style="color:var(--gold); font-size:13px">${labels[res.result]}</span>`); }
-  else parts.push(`<span class="giveup">${labels.gaveup}</span>`);
+  const labels = { first: '一发正解！', second: '第 2 次正解', third: '第 3 次正解', gaveup: '3 次都没读出，放弃了' };
+  parts.push(`<div style="font-size:13px; color:${finalResult === 'gaveup' ? 'var(--red)' : 'var(--gold)'}">${labels[finalResult]}</div>`);
   $('attempts').innerHTML = parts.join('');
-  $('score').innerHTML = `${(100 * score.ok / score.total).toFixed(0)}% <small>本页 ${score.ok} / ${score.total} 题正解</small>`;
 }
 
-/* ---------- 自动出题循环 ---------- */
+function hudScore() {
+  $('score').innerHTML = score.total
+    ? `${(100 * score.ok / score.total).toFixed(0)}% <small>本页 ${score.ok} / ${score.total} 题正解</small>`
+    : `<small>本页 0 / 0 题正解</small>`;
+}
+
+async function runWith(body, q) {
+  score.total++;
+  const res = await fetch('/api/quiz', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(x => x.json());
+  for (let i = 0; i < res.attempts.length; i++) {
+    const a = res.attempts[i];
+    if (has3D()) await Fly3D.writeAttempt(a.pred, a.correct, i);
+    updateActivity(a);
+    drawMiniScatter(a.kc_active || []);
+    hudAttempts(q.char, res.attempts.slice(0, i + 1), a.correct ? res.result : (i === 2 ? 'gaveup' : 'pending'));
+    if (a.correct) { score.ok++; break; }
+  }
+  hudAttempts(q.char, res.attempts, res.result);
+  hudScore();
+}
+
+async function submitDraw() {
+  if (busy) return;
+  if (!padDirty) { $('attempts').innerHTML = '<span style="color:var(--red)">先写一个数字（要和问题一致）</span>'; return; }
+  busy = true; $('btnSubmit').disabled = true;
+  try {
+    await runWith({ pixels: readPad(), label: curQ.char, auto: false }, curQ);
+    await fetchProblem();
+  } catch (e) { $('attempts').innerHTML = '<span style="color:var(--red)">请求失败</span>'; }
+  busy = false; $('btnSubmit').disabled = false;
+}
+
+/* ---------- 自动出题 ---------- */
 async function autoLoop() {
   while (autoOn) {
-    try { await nextQuiz(true); } catch (e) {}
-    await new Promise(r => setTimeout(r, 2500));
+    if (busy) { await new Promise(r => setTimeout(r, 500)); continue; }
+    busy = true;
+    try {
+      await fetchProblem();
+      await new Promise(r => setTimeout(r, 600));
+      await runWith({ pixels: curQ.pixels, label: curQ.char, auto: true }, curQ);
+      await new Promise(r => setTimeout(r, 900));
+    } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
+    busy = false;
   }
 }
 function toggleAuto() {
@@ -123,20 +163,20 @@ function toggleAuto() {
 
 /* ---------- 手写板 ---------- */
 const pad = $('pad'), pctx = pad.getContext('2d');
-let drawing = false, dirty = false;
+let drawing = false, padDirty = false;
 pctx.fillStyle = '#000'; pctx.fillRect(0, 0, 256, 256);
 pctx.lineCap = 'round'; pctx.lineJoin = 'round'; pctx.lineWidth = 16; pctx.strokeStyle = '#fff';
 const pos = e => {
   const r = pad.getBoundingClientRect(), p = e.touches ? e.touches[0] : e;
   return [(p.clientX - r.left) * 256 / r.width, (p.clientY - r.top) * 256 / r.height];
 };
-pad.addEventListener('mousedown', e => { drawing = true; dirty = true; const [x, y] = pos(e); pctx.beginPath(); pctx.moveTo(x, y); e.preventDefault(); });
+pad.addEventListener('mousedown', e => { drawing = true; padDirty = true; const [x, y] = pos(e); pctx.beginPath(); pctx.moveTo(x, y); e.preventDefault(); });
 pad.addEventListener('mousemove', e => { if (!drawing) return; const [x, y] = pos(e); pctx.lineTo(x, y); pctx.stroke(); e.preventDefault(); });
 window.addEventListener('mouseup', () => drawing = false);
-pad.addEventListener('touchstart', e => { drawing = true; dirty = true; const [x, y] = pos(e); pctx.beginPath(); pctx.moveTo(x, y); e.preventDefault(); });
+pad.addEventListener('touchstart', e => { drawing = true; padDirty = true; const [x, y] = pos(e); pctx.beginPath(); pctx.moveTo(x, y); e.preventDefault(); });
 pad.addEventListener('touchmove', e => { if (!drawing) return; const [x, y] = pos(e); pctx.lineTo(x, y); pctx.stroke(); e.preventDefault(); });
 pad.addEventListener('touchend', () => drawing = false);
-function clearPad() { pctx.fillStyle = '#000'; pctx.fillRect(0, 0, 256, 256); dirty = false; }
+function clearPad() { pctx.fillStyle = '#000'; pctx.fillRect(0, 0, 256, 256); padDirty = false; }
 function readPad() {
   const t = document.createElement('canvas'); t.width = 16; t.height = 16;
   const c = t.getContext('2d'); c.drawImage(pad, 0, 0, 16, 16);
@@ -144,15 +184,10 @@ function readPad() {
   for (let i = 0; i < d.length; i += 4) px.push(d[i] / 255);
   return px;
 }
-async function submitDraw() {
-  if (!dirty) { $('attempts').innerHTML = '<span style="color:var(--red)">先在上面写一个数字</span>'; return; }
-  $('btnSubmit').disabled = true;
-  try { await nextQuiz(false); } catch (e) { $('attempts').innerHTML = '<span style="color:var(--red)">请求失败</span>'; }
-  $('btnSubmit').disabled = false;
-}
 
 /* ---------- 脑活动侧栏 ---------- */
-const spark = {pn: [], kc: [], frac: []};
+function toggleBrain() { $('brainPanel').classList.toggle('open'); }
+const spark = { pn: [], kc: [], frac: [] };
 function pushSpark(arr, v) { arr.push(v); if (arr.length > 60) arr.shift(); }
 function drawSpark(id, arr, max) {
   const cv = $(id), c = cv.getContext('2d');
@@ -174,19 +209,19 @@ function updateActivity(a) {
   $('hz-kc').textContent = a.kc_hz.toFixed(2) + ' Hz';
   $('hz-frac').textContent = (a.kc_frac * 100).toFixed(1) + '%';
 }
-/* 训练流实时镜像（无需出题也有活动） */
 async function pollActivity() {
   try {
     const r = await fetch('/api/activity').then(x => x.json());
     if (r.activity) {
-      updateActivity(r.activity);
-      drawMiniScatter(r.activity.active_kc || []);
-      const lr = r.activity.last_reinforce;
+      const a = r.activity;
+      updateActivity({ pn_hz: a.pn_hz, kc_hz: a.kc_hz, kc_frac: a.kc_frac });
+      drawMiniScatter(a.active_kc || []);
+      const lr = a.last_reinforce;
       $('kcNote').innerHTML = lr
-        ? `最后一次强化：<b>KC #${lr.kc}</b>（群体 ${(lr.frac * 100).toFixed(1)}% 发火）<br>正在看字符 <b>${r.activity.char}</b> · 已呈现 ${(r.activity.t).toLocaleString()} 张`
-        : `正在看字符 <b>${r.activity.char}</b> · 已呈现 ${(r.activity.t).toLocaleString()} 张`;
+        ? `最后一次强化：<b>KC #${lr.kc}</b>（群体 ${(lr.frac * 100).toFixed(1)}% 发火）<br>正在看字符 <b>${a.char}</b> · 已呈现 ${(a.t).toLocaleString()} 张`
+        : `正在看字符 <b>${a.char}</b> · 已呈现 ${(a.t).toLocaleString()} 张`;
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 setInterval(pollActivity, 1200); pollActivity();
 
@@ -206,6 +241,18 @@ function drawMiniScatter(activeIds) {
   });
 }
 
+/* ---------- Lv 徽章 ---------- */
+async function pollLevel() {
+  try {
+    const s = await fetch('/api/state').then(x => x.json());
+    const xc = s.test_curve;
+    const t = xc.length ? (xc[xc.length - 1][1] * 100).toFixed(0) + '%' : '–';
+    $('lvBadge').textContent = `Lv ${s.level} · 未见字体测试 ${t}`;
+    $('padHint').textContent = s.classes_now.join(' ');
+  } catch (e) { }
+}
+setInterval(pollLevel, 4000); pollLevel();
+
 /* ---------- 训练流 ---------- */
 function renderStream(events) {
   const el = $('stream');
@@ -218,10 +265,14 @@ function renderStream(events) {
     el.appendChild(d);
   }
 }
-async function tick() {
-  try { renderStream((await fetch('/api/recent').then(x => x.json())).events); } catch (e) {}
+async function tickStream() {
+  try { renderStream((await fetch('/api/recent').then(x => x.json())).events); } catch (e) { }
 }
-setInterval(tick, 2000); tick();
+setInterval(tickStream, 2000); tickStream();
+
+/* ---------- 启动 ---------- */
+hudScore();
+fetchProblem();
 </script>
 </body>
 </html>

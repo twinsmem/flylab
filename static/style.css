@@ -46,8 +46,34 @@ button:disabled { opacity: 0.45; cursor: default; }
 /* 出题页布局 */
 .quizgrid { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
 @media (max-width: 900px) { .quizgrid { grid-template-columns: 1fr; } }
+
+/* 3D 舞台 */
+.stage { position: relative; height: 480px; background: #0d1117; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+@media (max-width: 700px) { .stage { height: 380px; } }
+#stage3d { position: absolute; inset: 0; }
+#stage3d canvas { display: block; }
+.stage .fallback { display: none; }
+body.no3d #stage3d { display: none; }
+body.no3d .stage .fallback { display: block; position: absolute; inset: 40px auto auto 50%; transform: translateX(-50%); width: 256px; height: 256px; image-rendering: pixelated; background: #000; border: 1px solid var(--border); border-radius: 8px; }
+body.no3d .stage { height: auto; padding: 24px 0 120px; }
+.hud { position: absolute; z-index: 5; }
+.hud-tl { top: 12px; left: 12px; display: flex; gap: 8px; }
+.hud-tr { top: 12px; right: 12px; margin: 0; }
+.hud-top { top: 14px; left: 50%; transform: translateX(-50%); font-size: 15px; color: var(--dim); background: #0d1117cc; border: 1px solid var(--border); border-radius: 8px; padding: 4px 14px; backdrop-filter: blur(4px); }
+.hud-top b { color: var(--text); font-size: 18px; }
+.hud-bl { bottom: 12px; left: 12px; background: #0d1117cc; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; backdrop-filter: blur(4px); max-width: 70%; }
+.lvbadge { background: #1a2b1e; color: var(--accent); border: 1px solid #2ea04366; }
 .badge { display: inline-block; background: #1a2b1e; color: var(--accent); border: 1px solid #2ea04366; border-radius: 20px; padding: 3px 14px; font-size: 13px; }
 .badge.off { background: var(--panel2); color: var(--dim); border-color: var(--border); }
+
+/* 脑活动抽屉（舞台内右侧） */
+.stage .brainpanel { position: absolute; top: 12px; right: 12px; width: 300px; z-index: 6; display: none; box-shadow: 0 8px 30px #000a; }
+.stage .brainpanel.open { display: block; }
+@media (min-width: 1100px) { .stage .brainpanel { display: block; } .hud-tr { display: none; } }
+.brainhead { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 8px; color: var(--text); }
+.brainhead .dot { color: var(--accent); }
+.brainx { margin-left: auto; cursor: pointer; color: var(--dim); }
+.brainhead { font-size: 13px; margin-bottom: 8px; color: var(--text); }
 #quizChar { width: 256px; height: 256px; image-rendering: pixelated; background: #000; border: 1px solid var(--border); border-radius: 8px; display: block; }
 #pad { background: #000; border: 1px solid var(--border); border-radius: 8px; cursor: crosshair; touch-action: none; display: block; }
 .attempts { margin-top: 10px; font-size: 15px; min-height: 30px; }
